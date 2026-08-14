@@ -1,0 +1,71 @@
+name: Notion — рутина (структура місяця + тижневий звіт)
+
+on:
+  # 1. Миттєвий тригер із Notion-автоматизації (webhook → repository_dispatch)
+  repository_dispatch:
+    types: [notion-week-report, notion-month-setup]
+
+  # 2. Фолбек: опитування галочки в робочі години, пн–пт, кожні 15 хв
+  schedule:
+    - cron: "*/15 6-18 * * 1-5"   # UTC → 09:00–21:00 за Києвом
+    - cron: "0 6 1 * *"           # 1-го числа о 09:00 за Києвом — структура місяця
+
+  # 3. Ручний запуск
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "Що запустити"
+        type: choice
+        options: [report, month]
+        default: report
+
+concurrency:
+  group: notion-week-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    if: >-
+      github.event.action != 'notion-month-setup' &&
+      github.event.schedule != '0 6 1 * *' &&
+      inputs.task != 'month'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install requests
+
+      - name: Згенерувати звіт
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NOTION_TASKS_DB: 3333647a-16dc-80fa-b9c6-000b79e8561a
+          # при виклику з вебхука обробляється тільки конкретна картка
+          PAGE_ID: ${{ github.event.client_payload.page_id }}
+        run: python week_report.py
+
+  month:
+    if: >-
+      github.event.action == 'notion-month-setup' ||
+      github.event.schedule == '0 6 1 * *' ||
+      inputs.task == 'month'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install requests
+
+      - name: Створити структуру місяця
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          # порожній PAGE_ID = створити в усіх картках зі списку CARDS
+          PAGE_ID: ${{ github.event.client_payload.page_id }}
+        run: python month_setup.py
