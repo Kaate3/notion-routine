@@ -37,7 +37,7 @@ FLAG_PROP = os.environ.get("FLAG_PROP", "Згенерувати звіт")   # c
 TYPE_PROP = os.environ.get("TYPE_PROP", "Тип")                # select
 TYPE_VALUE = os.environ.get("TYPE_VALUE", "🔄 Routine")
 
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
 NOTION_VERSION = "2025-09-03"
 REPORT_MARKER = "🧾 Міні-звіт за тиждень"
