@@ -1,23 +1,26 @@
 name: Notion — рутина (структура місяця + тижневий звіт)
 
 on:
-  # 1. Миттєвий тригер із Notion-автоматизації (webhook → repository_dispatch)
+  # 1. Миттєвий тригер із Notion-автоматизації (webhook → repository_dispatch),
+  #    якщо/коли її налаштуємо на платному плані Notion
   repository_dispatch:
     types: [notion-week-report, notion-month-setup]
 
-  # 2. Фолбек: опитування галочки в робочі години, пн–пт, кожні 15 хв
+  # 2. Основний робочий механізм зараз: опитування чекбоксів КОЖНІ 15 ХВ,
+  #    КОЖЕН день (без обмеження на будні — це і був головний баг).
+  #    Обидва скрипти самі перевіряють свій прапорець і виходять без дій,
+  #    якщо галочки немає — тому безпечно ганяти обидва щоразу.
   schedule:
-    - cron: "*/15 6-18 * * 1-5"   # UTC → 09:00–21:00 за Києвом
-    - cron: "0 6 1 * *"           # 1-го числа о 09:00 за Києвом — структура місяця
+    - cron: "*/15 * * * *"
 
-  # 3. Ручний запуск
+  # 3. Ручний запуск для тестів
   workflow_dispatch:
     inputs:
       task:
         description: "Що запустити"
         type: choice
-        options: [report, month]
-        default: report
+        options: [report, month, both]
+        default: both
 
 concurrency:
   group: notion-week-report
@@ -26,46 +29,45 @@ concurrency:
 jobs:
   report:
     if: >-
-      github.event.action != 'notion-month-setup' &&
-      github.event.schedule != '0 6 1 * *' &&
-      inputs.task != 'month'
+      github.event_name != 'workflow_dispatch' || inputs.task == 'report' || inputs.task == 'both'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - run: pip install requests
-
       - name: Згенерувати звіт
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           NOTION_TASKS_DB: 3333647a-16dc-80fa-b9c6-000b79e8561a
-          # при виклику з вебхука обробляється тільки конкретна картка
           PAGE_ID: ${{ github.event.client_payload.page_id }}
-        run: python week_report.py
+        run: |
+          if [ "${{ github.event.action }}" = "notion-month-setup" ]; then
+            echo "skip: це подія для month, не report"
+          else
+            python week_report.py
+          fi
 
   month:
     if: >-
-      github.event.action == 'notion-month-setup' ||
-      github.event.schedule == '0 6 1 * *' ||
-      inputs.task == 'month'
+      github.event_name != 'workflow_dispatch' || inputs.task == 'month' || inputs.task == 'both'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - run: pip install requests
-
       - name: Створити структуру місяця
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          # порожній PAGE_ID = створити в усіх картках зі списку CARDS
+          NOTION_TASKS_DB: 3333647a-16dc-80fa-b9c6-000b79e8561a
           PAGE_ID: ${{ github.event.client_payload.page_id }}
-        run: python month_setup.py
+        run: |
+          if [ "${{ github.event.action }}" = "notion-week-report" ]; then
+            echo "skip: це подія для report, не month"
+          else
+            python month_setup.py
+          fi
