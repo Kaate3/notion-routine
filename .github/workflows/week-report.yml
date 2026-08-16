@@ -41,7 +41,7 @@ jobs:
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          NOTION_TASKS_DB: 3333647a-16dc-80f0-b743-d4341a7c1ad7
+          NOTION_TASKS_DB: 3333647a-16dc-80fa-b9c6-000b79e8561a
           PAGE_ID: ${{ github.event.client_payload.page_id }}
         run: |
           if [ "${{ github.event.action }}" = "notion-month-setup" ]; then
@@ -63,7 +63,7 @@ jobs:
       - name: Створити структуру місяця
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_TASKS_DB: 3333647a-16dc-80f0-b743-d4341a7c1ad7
+          NOTION_TASKS_DB: 3333647a-16dc-80fa-b9c6-000b79e8561a
           PAGE_ID: ${{ github.event.client_payload.page_id }}
         run: |
           if [ "${{ github.event.action }}" = "notion-week-report" ]; then
