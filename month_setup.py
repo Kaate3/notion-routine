@@ -3,24 +3,18 @@
 """
 Генератор структури місяця в картці рутини Notion.
 
-Робить те саме, що кнопка «Операційні задачі | Створити», але з ПОРАХОВАНИМИ датами:
-  📍 Поточні завдання | 01.08 → 31.08.2026
-     ▸ Тиждень 1 | 01.08 → 09.08      ← межі рахуються з календаря
-        ▸ Команда              (статуси задач / блокери / дедлайни)
-        ▸ Перевірка оплат / документів
-        ▸ Моніторинг та звітність   → ☐ 07.08 щотижневий звіт  ← пʼятниця тижня
-        ▸ Комунікація
-     ▸ Тиждень 2 | 10.08 → 16.08 …
-     ▸ Inbox / brain dump          ← місячний рівень, поза тижнями
+ЗМІНА проти попередньої версії: раніше скрипт ІГНОРУВАВ чекбокс
+«Створити місяць» і працював лише вручну / по кроду 1-го числа.
+Тепер він:
+  1. Опитує базу «Завдання» на картки з увімкненим FLAG_PROP
+     («Створити місяць» = true) серед карток типу TYPE_VALUE.
+  2. Будує структуру тільки для цих карток (або для PAGE_ID, якщо задано
+     явно з repository_dispatch).
+  3. Знімає чекбокс після успішної генерації — так само, як week_report.py.
 
-Правила нарізки тижнів:
+Правила нарізки тижнів лишились ті самі:
   • тиждень = пн–нд, обрізаний межами місяця;
-  • якщо перший або останній огризок коротший за 4 дні — він приклеюється до сусіднього
-    (тому серпень 2026 = 4 тижні, а не 6).
-
-Запуск:
-  • по кнопці в Notion  → властивість-прапорець → вебхук → repository_dispatch
-  • або по крону 1-го числа о 09:00 за Києвом
+  • короткий (< 4 днів) огризок приклеюється до сусіднього тижня.
 """
 
 import os
@@ -31,12 +25,7 @@ import datetime as dt
 import requests
 
 # ---------------------------------------------------------------- конфіг карток
-
 # Для кожної картки рутини — свій набір категорій.
-# "items"          — рекурентні пункти, що зʼявляються в КОЖНОМУ тижні
-# "weekly_report"  — додати «☐ <пʼятниця> щотижневий звіт»
-# "month_level"    — категорії, що НЕ бʼються по тижнях (rolling)
-
 CARDS = {
     # Operations HQ — Катя
     "3613647a-16dc-80cb-8c8b-d1d8f54ed191": {
@@ -72,6 +61,12 @@ NOTION_VERSION = "2022-06-28"
 UA_MONTHS = ["січня", "лютого", "березня", "квітня", "травня", "червня",
              "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"]
 
+# База «Завдання» — той самий data source, що і в week_report.py
+TASKS_DB = os.environ.get("NOTION_TASKS_DB", "3333647a-16dc-80fa-b9c6-000b79e8561a")
+FLAG_PROP = os.environ.get("MONTH_FLAG_PROP", "Створити місяць")   # checkbox
+TYPE_PROP = os.environ.get("TYPE_PROP", "Тип")                     # select
+TYPE_VALUE = os.environ.get("TYPE_VALUE", "🔄 Routine")
+
 S = requests.Session()
 S.headers.update({
     "Authorization": f"Bearer {NOTION_TOKEN}",
@@ -91,6 +86,27 @@ def log(m: str) -> None:
     print(m, flush=True)
 
 
+# ---------------------------------------------------------------- хто просить місяць
+
+def flagged_pages() -> list[str]:
+    """Картки з увімкненим чекбоксом «Створити місяць», серед 🔄 Routine."""
+    body = {
+        "filter": {
+            "and": [
+                {"property": FLAG_PROP, "checkbox": {"equals": True}},
+                {"property": TYPE_PROP, "select": {"equals": TYPE_VALUE}},
+            ]
+        }
+    }
+    data = notion("POST", f"/databases/{TASKS_DB}/query", json=body)
+    return [p["id"] for p in data["results"]]
+
+
+def set_flag(page_id: str, value: bool) -> None:
+    notion("PATCH", f"/pages/{page_id}",
+           json={"properties": {FLAG_PROP: {"checkbox": value}}})
+
+
 # ---------------------------------------------------------------- календар
 
 def month_weeks(year: int, month: int) -> list[tuple[dt.date, dt.date]]:
@@ -100,7 +116,7 @@ def month_weeks(year: int, month: int) -> list[tuple[dt.date, dt.date]]:
 
     spans, cur = [], first
     while cur <= last:
-        end = min(cur + dt.timedelta(days=6 - cur.weekday()), last)  # до неділі
+        end = min(cur + dt.timedelta(days=6 - cur.weekday()), last)
         spans.append((cur, end))
         cur = end + dt.timedelta(days=1)
 
@@ -118,7 +134,6 @@ def month_weeks(year: int, month: int) -> list[tuple[dt.date, dt.date]]:
 
 
 def friday_of(start: dt.date, end: dt.date) -> dt.date:
-    """Пʼятниця всередині тижня — день щотижневого звіту."""
     d = end
     while d >= start:
         if d.weekday() == 4:
@@ -147,14 +162,13 @@ def todo(rich: list) -> dict:
 
 
 def cat_block(cat: dict, span: tuple[dt.date, dt.date] | None) -> dict:
-    """Категорія = згорнутий заголовок 3 рівня зі своїми чекбоксами."""
     kids = [todo([txt(i)]) for i in cat.get("items", [])]
 
     if cat.get("weekly_report") and span:
         fri = friday_of(*span)
         kids.append(todo([date_mention(fri), txt("  щотижневий звіт")]))
 
-    if not kids:                      # порожня категорія — один порожній чекбокс
+    if not kids:
         kids = [todo([txt("")])]
 
     return {"object": "block", "type": "heading_3",
@@ -162,9 +176,9 @@ def cat_block(cat: dict, span: tuple[dt.date, dt.date] | None) -> dict:
                           "is_toggleable": True, "color": "default", "children": kids}}
 
 
-def week_block(idx: int, span: tuple[dt.date, dt.date], cfg: dict) -> dict:
+def week_block(idx: int, span: tuple[dt.date, dt.date], cfg: dict, current_idx: int) -> dict:
     start, end = span
-    color = "purple_background" if idx == current_week_index else "default"
+    color = "purple_background" if idx == current_idx else "default"
     return {
         "object": "block", "type": "toggle",
         "toggle": {
@@ -176,8 +190,11 @@ def week_block(idx: int, span: tuple[dt.date, dt.date], cfg: dict) -> dict:
     }
 
 
-def build(cfg: dict, year: int, month: int) -> list[dict]:
+def build(cfg: dict, year: int, month: int) -> tuple[list[dict], list]:
     weeks = month_weeks(year, month)
+    today = dt.date.today()
+    current_idx = next((i for i, (s, e) in enumerate(weeks) if s <= today <= e), -1)
+
     first = dt.date(year, month, 1)
     last = dt.date(year, month, calendar.monthrange(year, month)[1])
 
@@ -188,7 +205,7 @@ def build(cfg: dict, year: int, month: int) -> list[dict]:
             date_mention(first, last),
         ]},
     }]
-    blocks += [week_block(i, w, cfg) for i, w in enumerate(weeks)]
+    blocks += [week_block(i, w, cfg, current_idx) for i, w in enumerate(weeks)]
     blocks += [cat_block(c, None) for c in cfg.get("month_level", [])]
     return blocks, weeks
 
@@ -196,11 +213,6 @@ def build(cfg: dict, year: int, month: int) -> list[dict]:
 # ---------------------------------------------------------------- вставка
 
 def anchor_before_tasks(page_id: str) -> str | None:
-    """
-    Знаходить блок, ПІСЛЯ якого треба вставити структуру:
-    останній блок перед поточним заголовком «📍 …».
-    Якщо заголовка нема — повертає None (тоді дописуємо в кінець).
-    """
     kids = notion("GET", f"/blocks/{page_id}/children", params={"page_size": 100})["results"]
     for i, b in enumerate(kids):
         if b["type"] == "heading_2":
@@ -220,33 +232,50 @@ def insert(page_id: str, blocks: list[dict]) -> None:
 
 # ---------------------------------------------------------------- main
 
-def main() -> None:
-    global current_week_index
+def process(page_id: str, year: int, month: int) -> None:
+    cfg = CARDS.get(page_id)
+    if not cfg:
+        log(f"   ✖ картка {page_id} не описана в CARDS — пропускаю")
+        set_flag(page_id, False)
+        return
 
+    blocks, weeks = build(cfg, year, month)
+    insert(page_id, blocks)
+    set_flag(page_id, False)
+
+    log(f"✔ {page_id}: {UA_MONTHS[month - 1]} {year} — {len(weeks)} тижнів")
+    for i, (s, e) in enumerate(weeks):
+        log(f"   Тиждень {i + 1}: {s:%d.%m} – {e:%d.%m}  (звіт {friday_of(s, e):%d.%m})")
+
+
+def main() -> None:
     today = dt.date.today()
     year = int(os.environ.get("YEAR") or today.year)
     month = int(os.environ.get("MONTH") or today.month)
 
-    only = os.environ.get("PAGE_ID", "").strip()
-    targets = {only: CARDS[only]} if only and only in CARDS else CARDS
+    # 1. Явний page_id (ручний запуск / repository_dispatch)
+    forced = os.environ.get("PAGE_ID", "").strip()
+    if forced:
+        targets = [forced]
+    else:
+        # 2. Інакше — питаємо Notion, у кого зараз стоїть галочка
+        targets = flagged_pages()
 
-    for page_id, cfg in targets.items():
-        weeks = month_weeks(year, month)
-        current_week_index = next(
-            (i for i, (s, e) in enumerate(weeks) if s <= today <= e), -1)
+    if not targets:
+        log("Немає карток із запитом на створення місяця.")
+        return
 
-        blocks, weeks = build(cfg, year, month)
-        insert(page_id, blocks)
+    errors = 0
+    for page_id in targets:
+        try:
+            process(page_id, year, month)
+        except Exception as e:
+            errors += 1
+            log(f"   ✖ помилка на {page_id}: {e}")
 
-        log(f"✔ {page_id}: {UA_MONTHS[month - 1]} {year} — {len(weeks)} тижнів")
-        for i, (s, e) in enumerate(weeks):
-            log(f"   Тиждень {i + 1}: {s:%d.%m} – {e:%d.%m}  (звіт {friday_of(s, e):%d.%m})")
+    if errors:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    current_week_index = -1
-    try:
-        main()
-    except Exception as e:
-        log(f"✖ {e}")
-        sys.exit(1)
+    main()
