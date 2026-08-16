@@ -159,9 +159,12 @@ def collect_tasks(week_block_id: str) -> list[dict]:
                 walk(b["id"], bucket)
 
     loose: list = []
-    for b in children(week_block_id):
+    kids = children(week_block_id)
+    log(f"   [debug] дітей у тижні: {len(kids)}")
+    for b in kids:
         t = b["type"]
         title = rt_text(b[t]["rich_text"]) if b[t].get("rich_text") else ""
+        log(f"   [debug] block type={t} has_children={b.get('has_children')} title={title!r}")
 
         if title.startswith(REPORT_MARKER):
             continue
@@ -169,6 +172,7 @@ def collect_tasks(week_block_id: str) -> list[dict]:
         if t in ("toggle", "heading_1", "heading_2", "heading_3") and b.get("has_children"):
             bucket: list = []
             walk(b["id"], bucket)
+            log(f"   [debug]   -> зібрано {len(bucket)} пунктів у '{title}'")
             if bucket:
                 categories.append({"title": title or "Без категорії", "items": bucket})
         elif t == "to_do":
