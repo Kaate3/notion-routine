@@ -57,7 +57,7 @@ CARDS = {
 }
 
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
-NOTION_VERSION = "2022-06-28"
+NOTION_VERSION = "2025-09-03"
 UA_MONTHS = ["січня", "лютого", "березня", "квітня", "травня", "червня",
              "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"]
 
@@ -98,7 +98,7 @@ def flagged_pages() -> list[str]:
             ]
         }
     }
-    data = notion("POST", f"/databases/{TASKS_DB}/query", json=body)
+    data = notion("POST", f"/data_sources/{TASKS_DB}/query", json=body)
     return [p["id"] for p in data["results"]]
 
 
