@@ -54,6 +54,113 @@ CARDS = {
         ],
         "month_level": [],
     },
+
+    # Операційні задачі + Програма — Ріта
+    "3433647a-16dc-8099-a88e-f7e8c81fc182": {
+        "title": "📍 Поточні завдання",
+        "categories": [
+            {"name": "Робота з підлітками та групами", "items": []},
+            {"name": "Відвідування занять", "items": []},
+            {"name": "Моніторинг та звітність", "items": [
+                "Вичитка таблиці для психологів",
+                "Збір і аналіз фідбеків від підлітків",
+            ], "weekly_report": True},
+            {"name": "Підготовка та методична робота", "items": []},
+        ],
+        "month_level": [],
+    },
+
+    # PR Routine — Владислава
+    "3443647a-16dc-8073-8b29-fe105921269a": {
+        "title": "📍 Поточні завдання",
+        "categories": [
+            {"name": "Профорієнтація", "items": []},
+            {"name": "Media Monitoring", "items": []},
+            {"name": "Donor Relations (Content)", "items": []},
+            {"name": "Комунікація", "items": []},
+            {"name": "Моніторинг та звітність", "items": [], "weekly_report": True},
+        ],
+        "month_level": [],
+    },
+
+    # Майстер-класи, супровід груп, кураторів та офісу — Поліна
+    "3483647a-16dc-80ba-af7d-d8025e693881": {
+        "title": "📍 Поточні завдання",
+        "categories": [
+            {"name": "Майстер-класи та активності", "items": [
+                "Створити та опублікувати графік МК на місяць.",
+                "Слідкування за відвідуваністю та фіксація відсутностей.",
+            ]},
+            {"name": "Взаємодія та комунікація", "items": [
+                "Супровід кураторів",
+                "Модерація груп",
+                "Ведення каналу випускників",
+            ]},
+            {"name": "Адміністрування та офіс", "items": [
+                "Замовлення їжі на 3 локації",
+                "Слідкування за відвідуваністю та фіксація відсутностей",
+            ]},
+            {"name": "Chances Count", "items": ["Розрахунок «ченсів»"]},
+        ],
+        "month_level": [],
+    },
+
+    # БАСАНЬ: Дистанційні регулярні завдання — Podobiedova
+    "3483647a-16dc-80ca-85f7-d9d3b2a18959": {
+        "title": "📍 Поточні завдання",
+        "categories": [
+            {"name": "Навчальна робота", "items": []},
+            {"name": "Дистанційний супровід та месенджери", "items": []},
+            {"name": "Консультування та підтримка", "items": []},
+            {"name": "Моніторинг та звітність", "items": [], "weekly_report": True},
+            {"name": "Комунікація", "items": []},
+        ],
+        "month_level": [],
+    },
+
+    # Fundraising HQ — Anastasiia Zynenko
+    "3923647a-16dc-8073-b916-ccbf431f2840": {
+        "title": "📍 Поточні завдання",
+        "categories": [
+            {"name": "Моніторинг та звітність", "items": [], "weekly_report": True},
+            {"name": "Комунікація", "items": []},
+        ],
+        "month_level": [{"name": "Inbox / brain dump", "items": []}],
+    },
+
+    # Finance & Grants | HQ — Oleksandr Kholmakov
+    "3a63647a-16dc-8080-af56-fcbfba2d8260": {
+        "title": "📍 Поточні завдання",
+        "categories": [
+            {"name": "Перевірка оплат / документів", "items": []},
+            {"name": "Моніторинг та звітність", "items": [], "weekly_report": True},
+            {"name": "Комунікація", "items": []},
+        ],
+        "month_level": [{"name": "Inbox / brain dump", "items": []}],
+    },
+
+    # Curator of Programs | HQ
+    "3aa3647a-16dc-80da-9b44-cb1ab2f40219": {
+        "title": "📍 Поточні завдання",
+        "categories": [
+            {"name": "Перевірка оплат / документів", "items": []},
+            {"name": "Моніторинг та звітність", "items": [], "weekly_report": True},
+            {"name": "Комунікація", "items": []},
+        ],
+        "month_level": [{"name": "Inbox / brain dump", "items": []}],
+    },
+
+    # Leading Psychologist | HQ — Vera Davidenko
+    "3bb3647a-16dc-80c9-b7d3-ddfd72e38d79": {
+        "title": "📍 Поточні завдання",
+        "categories": [
+            {"name": "Робота з підлітками та групами", "items": []},
+            {"name": "Відвідування занять", "items": []},
+            {"name": "Моніторинг та звітність", "items": [], "weekly_report": True},
+            {"name": "Підготовка та методична робота", "items": []},
+        ],
+        "month_level": [],
+    },
 }
 
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
