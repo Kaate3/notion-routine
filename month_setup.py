@@ -161,6 +161,21 @@ CARDS = {
         ],
         "month_level": [],
     },
+
+    # РЕГІОНИ І Операційне управління — Вероніка
+    "3433647a-16dc-80a4-9fb5-ca75401ccb9a": {
+        "title": "📍 Поточні завдання",
+        "categories": [
+            {"name": "Луцьк", "items": []},
+            {"name": "Львів", "items": []},
+            {"name": "Ківерці", "items": []},
+            {"name": "Мукачево", "items": []},
+            {"name": "Запоріжжя", "items": []},
+            {"name": "Київ", "items": []},
+            {"name": "Звіти", "items": [], "weekly_report": True},
+        ],
+        "month_level": [],
+    },
 }
 
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
