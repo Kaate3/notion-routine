@@ -73,14 +73,9 @@
 <div id="status"></div>
 
 <script>
-  // Fine-grained GitHub PAT, scoped ONLY to this one repo, "Actions: Read and write" permission.
-  // Generate at: https://github.com/settings/personal-access-tokens/new
-  //   Repository access → Only select repositories → Kaate3/notion-routine
-  //   Permissions → Actions → Read and write (nothing else needed)
-  // This token is visible to anyone who views this page's source — that's why its scope
-  // is limited to just triggering workflow runs on this one repo, nothing more.
-  const GITHUB_TOKEN = "ВСТАВ_СЮДИ_СВІЙ_ТОКЕН";
-  const REPO = "Kaate3/notion-routine";
+  // Cloudflare Worker proxy — holds the GitHub token server-side, out of view.
+  // See cloudflare-worker/ and CLOUDFLARE_SETUP.md for deploy instructions.
+  const WEBHOOK_URL = "https://ВСТАВ_СЮДИ_URL_ВОРКЕРА.workers.dev";
 
   const params = new URLSearchParams(window.location.search);
   const pageId = params.get("page_id");
@@ -106,21 +101,14 @@
     btn.classList.add("loading");
     setStatus(`Запускаю: ${label}...`, "");
 
-    const eventType = task === "month" ? "notion-month-setup" : "notion-week-report";
-
     try {
-      const res = await fetch(`https://api.github.com/repos/${REPO}/dispatches`, {
+      const res = await fetch(WEBHOOK_URL, {
         method: "POST",
-        headers: {
-          "Accept": "application/vnd.github+json",
-          "Authorization": `Bearer ${GITHUB_TOKEN}`,
-          "X-GitHub-Api-Version": "2022-11-28",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ event_type: eventType, client_payload: { page_id: pageId } }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_id: pageId, task }),
       });
 
-      if (res.status === 204) {
+      if (res.ok) {
         setStatus("✅ Готово! Перевір картку за кілька хвилин", "ok");
       } else {
         setStatus(`⚠️ Помилка (${res.status}). Онови чекбокс "${label}" на картці вручну — автоматика підхопить його протягом 15 хв`, "err");
